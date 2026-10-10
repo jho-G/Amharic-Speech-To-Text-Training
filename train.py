@@ -40,3 +40,14 @@ from peft import (
     PeftModel,
 )
 
+# -----------------------------------------------------------------------------
+# 0. LOGGING & SYSTEM SETUP
+# -----------------------------------------------------------------------------
+logging.basicConfig(
+    format="%(asctime)s - %(levelname)s - [%(filename)s:%(lineno)d] - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    level=logging.INFO,
+)
+logger = logging.getLogger(__name__)
+
+
