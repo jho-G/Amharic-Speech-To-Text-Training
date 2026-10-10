@@ -100,3 +100,18 @@ class SpeechDatasetPreprocessor:
         self.max_label_length = max_label_length
         self.normalizer = AmharicTextNormalizer()
 
+    def __call__(self, batch: Dict[str, Any]) -> Dict[str, Any]:
+        audio_info = batch["audio"]
+        # 1. Decode raw bytes or access array
+        if isinstance(audio_info, dict) and "bytes" in audio_info and audio_info["bytes"] is not None:
+            array, orig_sr = sf.read(io.BytesIO(audio_info["bytes"]))
+        elif isinstance(audio_info, dict) and "array" in audio_info and audio_info["array"] is not None:
+            array = audio_info["array"]
+            orig_sr = audio_info.get("sampling_rate", self.target_sampling_rate)
+        else:
+            raise ValueError(f"Unrecognized audio format: {type(audio_info)}")
+
+        # 2. Convert multi-channel / stereo to mono
+        if hasattr(array, "ndim") and array.ndim > 1:
+            array = array.mean(axis=1)
+
