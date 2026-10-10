@@ -202,3 +202,19 @@ class ComputeMetricsWrapper:
         self.normalizer = AmharicTextNormalizer()
 
     def __call__(self, pred) -> Dict[str, float]:
+        pred_ids = pred.predictions
+        label_ids = pred.label_ids
+
+        # Replace -100 with pad_token_id so tokenizer can decode cleanly
+        label_ids[label_ids == -100] = self.tokenizer.pad_token_id
+
+        # Decode tokens to Unicode text, skipping special tokens like <|startoftranscript|>
+        pred_str = self.tokenizer.batch_decode(pred_ids, skip_special_tokens=True)
+        label_str = self.tokenizer.batch_decode(label_ids, skip_special_tokens=True)
+
+        # Normalize Ethiopic orthography (wordspaces & punctuation)
+        pred_str = [self.normalizer.normalize(text) for text in pred_str]
+        label_str = [self.normalizer.normalize(text) for text in label_str]
+
+        # Filter out empty references if any, avoiding ZeroDivisionError in jiwer
+        filtered_preds, filtered_labels = [], []
