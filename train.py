@@ -51,3 +51,32 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+# -----------------------------------------------------------------------------
+# 1. TEXT NORMALIZATION (GE'EZ / AMHARIC SCRIPT)
+# -----------------------------------------------------------------------------
+class AmharicTextNormalizer:
+    """
+    Text normalizer tailored for Amharic (Ge'ez script).
+    Handles traditional Ethiopic punctuation marks and whitespace normalization.
+    
+    In Ethiopic orthography:
+      - '፡' (U+1361) is the traditional Ethiopic wordspace (ቃላት መለያ).
+        Modern written Amharic frequently alternates between '፡' and standard ASCII space ' '.
+        Converting '፡' to standard space ensures fair, standardized WER calculation.
+      - '።' (U+1362) is the Ethiopic full stop (አራት ነጥብ).
+      - '፤' (U+1364) is the Ethiopic semicolon.
+      - '፣' (U+1363) is the Ethiopic comma.
+    """
+
+    @staticmethod
+    def normalize(text: str) -> str:
+        if not text:
+            return ""
+        # 1. Replace traditional Ethiopic word separators with standard spaces
+        text = text.replace("፡", " ")
+        # 2. Normalize multiple spaces into a single space
+        text = re.sub(r"\s+", " ", text)
+        # 3. Strip leading and trailing whitespace
+        return text.strip()
+
+
