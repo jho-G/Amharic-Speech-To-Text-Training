@@ -258,3 +258,23 @@ def load_and_prepare_leyu_dataset(
         # maintainers upload additional samples without updating repo metadata headers.
         ds = load_dataset(name, split="train", verification_mode="no_checks")
 
+        # Verify necessary columns exist
+        columns = ds.column_names
+        logger.info(f"Dataset '{name}' features: {columns}")
+        if "audio" not in columns or "text" not in columns:
+            # Fallback check if text is named 'sentence' or 'transcription'
+            if "sentence" in columns:
+                ds = ds.rename_column("sentence", "text")
+            elif "transcription" in columns:
+                ds = ds.rename_column("transcription", "text")
+            else:
+                raise ValueError(
+                    f"Dataset {name} missing text column. Found columns: {columns}"
+                )
+
+        # Standardize columns: keep only 'audio' and 'text' to avoid schema mismatch
+        cols_to_remove = [c for c in ds.column_names if c not in ["audio", "text"]]
+        if cols_to_remove:
+            ds = ds.remove_columns(cols_to_remove)
+
+        loaded_datasets.append(ds)
