@@ -238,3 +238,23 @@ class ComputeMetricsWrapper:
         return {"wer": round(wer, 2), "cer": round(cer, 2)}
 
 
+# -----------------------------------------------------------------------------
+# 4. DATASET LOADER & CONCATENATOR (DIALECT GENERALIZATION)
+# -----------------------------------------------------------------------------
+def load_and_prepare_leyu_dataset(
+    dataset_names: List[str],
+    eval_split_ratio: float = 0.1,
+    seed: int = 42,
+) -> DatasetDict:
+    """
+    Loads multiple regional dialect datasets from Hugging Face's leyu-amharic organization,
+    harmonizes schemas, concatenates them for generalized acoustic modeling,
+    and splits into train and validation sets.
+    """
+    loaded_datasets = []
+
+    for name in dataset_names:
+        # verification_mode="no_checks" avoids NonMatchingSplitsSizesError when dataset
+        # maintainers upload additional samples without updating repo metadata headers.
+        ds = load_dataset(name, split="train", verification_mode="no_checks")
+
