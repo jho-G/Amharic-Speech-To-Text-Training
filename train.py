@@ -397,3 +397,68 @@ def train_pipeline(args):
     )
     compute_metrics = ComputeMetricsWrapper(tokenizer=tokenizer)
 
+    # 6. Seq2Seq Training Arguments
+    # Configured for consumer-grade GPUs (RTX 3090/4090, A10G)
+    training_args = Seq2SeqTrainingArguments(
+        output_dir=args.output_dir,
+        per_device_train_batch_size=args.batch_size,
+        gradient_accumulation_steps=args.gradient_accumulation_steps,
+        learning_rate=args.learning_rate,
+        warmup_steps=args.warmup_steps,
+        num_train_epochs=args.num_train_epochs,
+        gradient_checkpointing=True,
+        fp16=torch.cuda.is_available() and not torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+        eval_strategy="steps",
+        eval_steps=args.eval_steps,
+        save_strategy="steps",
+        save_steps=args.save_steps,
+        save_total_limit=2,
+        logging_strategy="steps",
+        logging_steps=args.logging_steps,
+        per_device_eval_batch_size=args.eval_batch_size,
+        predict_with_generate=True,
+        generation_max_length=225,
+        metric_for_best_model="wer",
+        greater_is_better=False,
+        load_best_model_at_end=True,
+        remove_unused_columns=False,  # Essential for custom speech collator
+        dataloader_num_workers=args.num_workers,
+        report_to=["tensorboard"],
+        seed=args.seed,
+    )
+
+    # 7. Initialize Trainer
+    trainer = Seq2SeqTrainer(
+        args=training_args,
+        model=model,
+        train_dataset=train_dataset,
+        eval_dataset=eval_dataset,
+        data_collator=data_collator,
+        compute_metrics=compute_metrics,
+        processing_class=processor.feature_extractor,
+    )
+
+    # 8. Start Training
+    logger.info("Starting Whisper LoRA fine-tuning for Amharic...")
+    train_result = trainer.train()
+
+    # 9. Log and Save Trained LoRA Adapter
+    trainer.log_metrics("train", train_result.metrics)
+    trainer.save_metrics("train", train_result.metrics)
+    trainer.save_state()
+
+    logger.info(f"Saving fine-tuned LoRA adapter to: {args.output_dir}")
+    trainer.save_model(args.output_dir)
+    processor.save_pretrained(args.output_dir)
+
+    # Final evaluation pass
+    logger.info("Running final evaluation pass on validation set...")
+    eval_metrics = trainer.evaluate()
+    trainer.log_metrics("eval", eval_metrics)
+    trainer.save_metrics("eval", eval_metrics)
+    logger.info(f"Final Validation Metrics -> WER: {eval_metrics.get('eval_wer')}%, CER: {eval_metrics.get('eval_cer')}%")
+
+    return args.output_dir
+
+
