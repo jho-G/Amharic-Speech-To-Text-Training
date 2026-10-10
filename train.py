@@ -122,3 +122,19 @@ class SpeechDatasetPreprocessor:
                 waveform_t, orig_freq=orig_sr, new_freq=self.target_sampling_rate
             ).numpy()
 
+        # 4. Extract log-Mel spectrogram (Whisper expects 80 Mel bins x 3000 frames)
+        batch["input_features"] = self.feature_extractor(
+            array,
+            sampling_rate=self.target_sampling_rate,
+        ).input_features[0]
+
+        # 5. Clean Ge'ez script text and encode to target token IDs (bounded by Whisper decoder length)
+        cleaned_text = self.normalizer.normalize(batch["text"])
+        batch["labels"] = self.tokenizer(
+            cleaned_text,
+            max_length=self.max_label_length,
+            truncation=True,
+        ).input_ids
+        return batch
+
+
