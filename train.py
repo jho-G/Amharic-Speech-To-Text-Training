@@ -218,3 +218,23 @@ class ComputeMetricsWrapper:
 
         # Filter out empty references if any, avoiding ZeroDivisionError in jiwer
         filtered_preds, filtered_labels = [], []
+        for p, l in zip(pred_str, label_str):
+            if len(l.strip()) > 0:
+                filtered_preds.append(p)
+                filtered_labels.append(l)
+
+        if not filtered_labels:
+            logger.warning("Empty validation reference strings encountered.")
+            return {"wer": 100.0, "cer": 100.0}
+
+        # Calculate metrics as percentages (0 - 100%)
+        wer = 100.0 * self.wer_metric.compute(
+            predictions=filtered_preds, references=filtered_labels
+        )
+        cer = 100.0 * self.cer_metric.compute(
+            predictions=filtered_preds, references=filtered_labels
+        )
+
+        return {"wer": round(wer, 2), "cer": round(cer, 2)}
+
+
