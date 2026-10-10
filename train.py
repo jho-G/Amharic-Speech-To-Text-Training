@@ -80,3 +80,23 @@ class AmharicTextNormalizer:
         return text.strip()
 
 
+class SpeechDatasetPreprocessor:
+    """
+    Top-level callable preprocessor for Whisper audio features and Amharic text tokens.
+    Directly decodes audio bytes using soundfile and resamples with torchaudio.
+    This completely bypasses torchcodec / FFmpeg DLL dependency issues on Windows.
+    """
+
+    def __init__(
+        self,
+        feature_extractor: WhisperFeatureExtractor,
+        tokenizer: WhisperTokenizer,
+        target_sampling_rate: int = 16000,
+        max_label_length: int = 448,
+    ):
+        self.feature_extractor = feature_extractor
+        self.tokenizer = tokenizer
+        self.target_sampling_rate = target_sampling_rate
+        self.max_label_length = max_label_length
+        self.normalizer = AmharicTextNormalizer()
+
