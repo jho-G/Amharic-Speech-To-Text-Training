@@ -462,3 +462,151 @@ def train_pipeline(args):
     return args.output_dir
 
 
+# -----------------------------------------------------------------------------
+# 6. SCRIPT ENTRY POINT & CLI ARGUMENTS
+# -----------------------------------------------------------------------------
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Fine-tune Whisper on multi-dialect Amharic speech data with LoRA."
+    )
+    # Model & Language Configuration
+    parser.add_argument(
+        "--base_model_name",
+        type=str,
+        default="openai/whisper-small",
+        help="Base Whisper model (MIT License). e.g., openai/whisper-small or openai/whisper-base",
+    )
+    parser.add_argument(
+        "--language",
+        type=str,
+        default="Amharic",
+        help="Target language name for Whisper tokenizer.",
+    )
+    parser.add_argument(
+        "--task",
+        type=str,
+        default="transcribe",
+        choices=["transcribe", "translate"],
+        help="Whisper task type.",
+    )
+    # Datasets
+    parser.add_argument(
+        "--dataset_names",
+        nargs="+",
+        default=[
+            "leyu-amharic/leyu-amharic-addis-ababa-dialect",
+            "leyu-amharic/leyu-amharic-shewa-dialect",
+        ],
+        help="List of Hugging Face dataset identifiers to concatenate.",
+    )
+    parser.add_argument(
+        "--target_sampling_rate",
+        type=int,
+        default=16000,
+        help="Target audio sampling rate in Hz. Whisper natively uses 16000 Hz.",
+    )
+    parser.add_argument(
+        "--eval_split_ratio",
+        type=float,
+        default=0.1,
+        help="Ratio of concatenated dataset reserved for evaluation.",
+    )
+    # LoRA / PEFT Configuration
+    parser.add_argument(
+        "--lora_r",
+        type=int,
+        default=32,
+        help="LoRA rank dimension.",
+    )
+    parser.add_argument(
+        "--lora_alpha",
+        type=int,
+        default=64,
+        help="LoRA alpha scaling factor.",
+    )
+    parser.add_argument(
+        "--lora_dropout",
+        type=float,
+        default=0.05,
+        help="LoRA dropout rate.",
+    )
+    # Training Hyperparameters
+    parser.add_argument(
+        "--output_dir",
+        type=str,
+        default="./whisper-small-amharic-lora",
+        help="Directory to save LoRA checkpoints.",
+    )
+    parser.add_argument(
+        "--batch_size",
+        type=int,
+        default=8,
+        help="Per-device training batch size.",
+    )
+    parser.add_argument(
+        "--eval_batch_size",
+        type=int,
+        default=8,
+        help="Per-device evaluation batch size.",
+    )
+    parser.add_argument(
+        "--gradient_accumulation_steps",
+        type=int,
+        default=2,
+        help="Gradient accumulation steps (effective batch size = batch_size * grad_accum).",
+    )
+    parser.add_argument(
+        "--learning_rate",
+        type=float,
+        default=1e-4,
+        help="Peak learning rate for LoRA training.",
+    )
+    parser.add_argument(
+        "--num_train_epochs",
+        type=int,
+        default=5,
+        help="Number of training epochs.",
+    )
+    parser.add_argument(
+        "--warmup_steps",
+        type=int,
+        default=100,
+        help="Number of learning rate warmup steps.",
+    )
+    parser.add_argument(
+        "--eval_steps",
+        type=int,
+        default=200,
+        help="Evaluate model every N steps.",
+    )
+    parser.add_argument(
+        "--save_steps",
+        type=int,
+        default=200,
+        help="Save checkpoint every N steps.",
+    )
+    parser.add_argument(
+        "--logging_steps",
+        type=int,
+        default=25,
+        help="Log training loss every N steps.",
+    )
+    parser.add_argument(
+        "--num_workers",
+        type=int,
+        default=1,
+        help="Number of dataloader worker processes (1 or 0 recommended on Windows).",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=42,
+        help="Random seed for reproducibility.",
+    )
+
+    return parser.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    train_pipeline(args)
