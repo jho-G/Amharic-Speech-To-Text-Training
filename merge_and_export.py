@@ -32,3 +32,31 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+def merge_and_export_model(
+    base_model_name: str,
+    lora_checkpoint_dir: str,
+    export_dir: str,
+    device: str = "auto",
+):
+    """
+    Merges LoRA adapter into base Whisper weights and exports for production serving.
+
+    Args:
+        base_model_name: Hugging Face model ID (e.g. 'openai/whisper-small')
+        lora_checkpoint_dir: Path to trained LoRA adapter directory
+        export_dir: Destination path for standalone merged model
+        device: Device to use during merge ('auto', 'cuda', 'cpu')
+    """
+    logger.info(f"Loading base Whisper model: {base_model_name}")
+    base_model = WhisperForConditionalGeneration.from_pretrained(
+        base_model_name,
+        device_map=device if device != "cpu" else None,
+        torch_dtype=torch.float16 if torch.cuda.is_available() else torch.float32,
+    )
+
+    logger.info(f"Loading Whisper processor from adapter dir: {lora_checkpoint_dir}")
+    processor = WhisperProcessor.from_pretrained(lora_checkpoint_dir)
+
+    logger.info(f"Loading LoRA adapter from: {lora_checkpoint_dir}")
+    lora_model = PeftModel.from_pretrained(base_model, lora_checkpoint_dir)
+
