@@ -60,3 +60,21 @@ def merge_and_export_model(
     logger.info(f"Loading LoRA adapter from: {lora_checkpoint_dir}")
     lora_model = PeftModel.from_pretrained(base_model, lora_checkpoint_dir)
 
+    logger.info("Merging LoRA weights back into base model (merge_and_unload)...")
+    # merge_and_unload() fuses adapter matrices (W = W_0 + (alpha/r) * B * A)
+    # returning a standard WhisperForConditionalGeneration instance.
+    merged_model = lora_model.merge_and_unload()
+
+    # Ensure model config reflects Amharic transcription defaults
+    merged_model.config.forced_decoder_ids = None
+    merged_model.config.suppress_tokens = []
+    merged_model.generation_config.language = "amharic"
+    merged_model.generation_config.task = "transcribe"
+    merged_model.generation_config.forced_decoder_ids = None
+
+    os.makedirs(export_dir, exist_ok=True)
+    logger.info(f"Saving merged standalone model to: {export_dir}")
+    merged_model.save_pretrained(export_dir)
+    processor.save_pretrained(export_dir)
+
+    logger.info("Export completed successfully! Verifying standalone model...")
