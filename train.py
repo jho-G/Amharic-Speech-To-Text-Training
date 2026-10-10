@@ -300,3 +300,67 @@ def load_and_prepare_leyu_dataset(
     return dataset_dict
 
 
+# -----------------------------------------------------------------------------
+# 5. MAIN TRAINING PIPELINE
+# -----------------------------------------------------------------------------
+def train_pipeline(args):
+    """
+    End-to-End training execution function:
+      1. Loads Whisper processor & tokenizer with Amharic language setup
+      2. Casts and resamples audio streams
+      3. Builds PEFT/LoRA adapter targeting q_proj and v_proj
+      4. Trains via Seq2SeqTrainer with mixed precision & gradient checkpointing
+      5. Saves the trained LoRA adapter
+    """
+    logger.info(f"Initializing Whisper model & tokenizer from: {args.base_model_name}")
+
+    # 1. Feature Extractor & Tokenizer
+    # Whisper Mel-filterbanks natively operate on 16kHz audio (80 Mel channels).
+    feature_extractor = WhisperFeatureExtractor.from_pretrained(args.base_model_name)
+    tokenizer = WhisperTokenizer.from_pretrained(
+        args.base_model_name,
+        language=args.language,
+        task=args.task,
+    )
+    processor = WhisperProcessor.from_pretrained(
+        args.base_model_name,
+        language=args.language,
+        task=args.task,
+    )
+
+    # 2. Dataset Loading & Resampling
+    # Requirement: Handle audio arrays cast & resampled.
+    # Note: If input audio is 8kHz (e.g. telephony), datasets.Audio resamples it.
+    # We then resample to 16kHz for WhisperFeatureExtractor to match Whisper's pre-trained Mel-bins.
+    dataset_dict = load_and_prepare_leyu_dataset(
+        dataset_names=args.dataset_names,
+        eval_split_ratio=args.eval_split_ratio,
+        seed=args.seed,
+    )
+
+    # Cast audio column to Audio(decode=False) so datasets does not invoke torchcodec / missing Windows FFmpeg DLLs.
+    # Our SpeechDatasetPreprocessor handles robust decoding via soundfile and fast resampling via torchaudio.
+    logger.info("Configuring audio stream with native soundfile decoding (bypassing torchcodec/FFmpeg DLLs)...")
+    dataset_dict = dataset_dict.cast_column("audio", Audio(decode=False))
+
+    # 3. Preprocessing Transformation
+    preprocessor = SpeechDatasetPreprocessor(
+        feature_extractor=feature_extractor,
+        tokenizer=tokenizer,
+        target_sampling_rate=args.target_sampling_rate,
+    )
+
+    logger.info("Applying feature extraction and Amharic tokenization (batch mapping)...")
+    train_dataset = dataset_dict["train"].map(
+        preprocessor,
+        remove_columns=dataset_dict["train"].column_names,
+        num_proc=args.num_workers if args.num_workers > 1 else None,
+        desc="Preprocessing train dataset",
+    )
+    eval_dataset = dataset_dict["eval"].map(
+        preprocessor,
+        remove_columns=dataset_dict["eval"].column_names,
+        num_proc=args.num_workers if args.num_workers > 1 else None,
+        desc="Preprocessing eval dataset",
+    )
+
