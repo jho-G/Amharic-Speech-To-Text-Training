@@ -40,3 +40,29 @@ def transcribe_audio(
     return transcript
 
 
+def main():
+    parser = argparse.ArgumentParser(description="Amharic ASR Inference CLI")
+    parser.add_argument(
+        "--model_path",
+        type=str,
+        default="./whisper-small-amharic-production",
+        help="Path to merged production model directory.",
+    )
+    parser.add_argument(
+        "--audio_path",
+        type=str,
+        required=True,
+        help="Path to Amharic speech audio file (.wav, .mp3, .flac).",
+    )
+    args = parser.parse_args()
+
+    transcription = transcribe_audio(args.model_path, args.audio_path)
+    print("\n" + "=" * 60)
+    print("TRANSCRIPTION RESULT (የተተረጎመው ጽሑፍ):")
+    print("=" * 60)
+    print(transcription)
+    print("=" * 60)
+
+
+if __name__ == "__main__":
+    main()
