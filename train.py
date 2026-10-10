@@ -364,3 +364,36 @@ def train_pipeline(args):
         desc="Preprocessing eval dataset",
     )
 
+    # 4. Model Initialization & LoRA Configuration (PEFT)
+    logger.info(f"Loading base Whisper model: {args.base_model_name}")
+    model = WhisperForConditionalGeneration.from_pretrained(args.base_model_name)
+    model.config.use_cache = False  # Required when gradient_checkpointing is enabled
+
+    # Force generation parameters for Amharic transcription
+    model.config.forced_decoder_ids = None
+    model.config.suppress_tokens = []
+    model.generation_config.language = "amharic"
+    model.generation_config.task = "transcribe"
+    model.generation_config.forced_decoder_ids = None
+
+    # LoRA Configuration targeting q_proj and v_proj attention blocks
+    logger.info("Configuring PEFT/LoRA (targeting q_proj and v_proj attention modules)...")
+    peft_config = LoraConfig(
+        r=args.lora_r,
+        lora_alpha=args.lora_alpha,
+        target_modules=["q_proj", "v_proj"],
+        lora_dropout=args.lora_dropout,
+        bias="none",
+    )
+
+    # Wrap model with PEFT LoRA adapter
+    model = get_peft_model(model, peft_config)
+    model.print_trainable_parameters()
+
+    # 5. Data Collator & Metrics
+    data_collator = DataCollatorSpeechSeq2SeqWithPadding(
+        processor=processor,
+        decoder_start_token_id=model.config.decoder_start_token_id,
+    )
+    compute_metrics = ComputeMetricsWrapper(tokenizer=tokenizer)
+
