@@ -138,3 +138,19 @@ class SpeechDatasetPreprocessor:
         return batch
 
 
+# -----------------------------------------------------------------------------
+# 2. DATA COLLATOR (DYNAMIC SPEECH & SEQ2SEQ PADDING)
+# -----------------------------------------------------------------------------
+@dataclass
+class DataCollatorSpeechSeq2SeqWithPadding:
+    """
+    Data collator that dynamically pads input features (audio Mel-spectrograms)
+    and labels (tokenized Amharic text) to the maximum length within each batch.
+    
+    Crucial PyTorch Masking:
+      Replaces padding token IDs in labels with -100 so that CrossEntropyLoss
+      ignores padded label positions when computing backpropagation loss.
+    """
+    processor: WhisperProcessor
+    decoder_start_token_id: int
+
