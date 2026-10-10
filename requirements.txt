@@ -3,3 +3,20 @@ torch>=2.1.0
 torchaudio>=2.1.0
 accelerate>=0.28.0
 
+# Hugging Face Ecosystem
+transformers>=4.40.0
+datasets>=2.18.0
+evaluate>=0.4.1
+
+# Parameter-Efficient Fine-Tuning (PEFT)
+peft>=0.10.0
+
+# Audio Processing & IO
+soundfile>=0.12.1
+librosa>=0.10.1
+
+# Metrics for ASR (Word & Character Error Rate)
+jiwer>=3.0.3
+
+# Experiment Tracking & Logging
+tensorboard>=2.15.0
