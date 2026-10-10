@@ -186,3 +186,19 @@ class DataCollatorSpeechSeq2SeqWithPadding:
         return batch
 
 
+# -----------------------------------------------------------------------------
+# 3. METRICS EVALUATION (WER & CER FOR GE'EZ SCRIPT)
+# -----------------------------------------------------------------------------
+class ComputeMetricsWrapper:
+    """
+    Computes Word Error Rate (WER) and Character Error Rate (CER) on decoded
+    Amharic transcripts using the evaluate library.
+    """
+
+    def __init__(self, tokenizer: WhisperTokenizer):
+        self.tokenizer = tokenizer
+        self.wer_metric = evaluate.load("wer")
+        self.cer_metric = evaluate.load("cer")
+        self.normalizer = AmharicTextNormalizer()
+
+    def __call__(self, pred) -> Dict[str, float]:
