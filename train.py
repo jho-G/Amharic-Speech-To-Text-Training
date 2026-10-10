@@ -115,3 +115,10 @@ class SpeechDatasetPreprocessor:
         if hasattr(array, "ndim") and array.ndim > 1:
             array = array.mean(axis=1)
 
+        # 3. Resample to 16kHz for Whisper's log-Mel filterbanks
+        if orig_sr != self.target_sampling_rate:
+            waveform_t = torch.from_numpy(array.astype(np.float32))
+            array = torchaudio.functional.resample(
+                waveform_t, orig_freq=orig_sr, new_freq=self.target_sampling_rate
+            ).numpy()
+
