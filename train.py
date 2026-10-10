@@ -278,3 +278,25 @@ def load_and_prepare_leyu_dataset(
             ds = ds.remove_columns(cols_to_remove)
 
         loaded_datasets.append(ds)
+
+    logger.info(f"Concatenating {len(loaded_datasets)} regional dialect datasets...")
+    full_dataset = concatenate_datasets(loaded_datasets)
+    logger.info(f"Total concatenated samples: {len(full_dataset)}")
+
+    # Shuffle and split into train and evaluation splits
+    split_dataset = full_dataset.train_test_split(
+        test_size=eval_split_ratio, seed=seed, shuffle=True
+    )
+    dataset_dict = DatasetDict(
+        {
+            "train": split_dataset["train"],
+            "eval": split_dataset["test"],
+        }
+    )
+
+    logger.info(
+        f"Prepared Splits -> Train: {len(dataset_dict['train'])}, Eval: {len(dataset_dict['eval'])}"
+    )
+    return dataset_dict
+
+
